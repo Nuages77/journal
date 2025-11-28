@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
@@ -63,7 +62,6 @@
     .entry-item-preview{font-size:11px;color:var(--ink-light);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .corner-deco{position:fixed;bottom:15px;right:15px;font-size:22px;opacity:0.15;cursor:pointer;user-select:none;transition:opacity 0.3s,transform 0.3s}
     .corner-deco:hover{opacity:0.4;transform:rotate(10deg) scale(1.1)}
-    .loading{text-align:center;padding:40px;color:var(--ink-light)}
     @media(max-width:600px){.container{padding:15px 12px}.journal-wrapper{padding:20px 15px}.journal-wrapper::before{display:none}.journal-area{padding-left:0}.header{flex-direction:column;text-align:center}}
   </style>
 </head>
@@ -110,86 +108,322 @@
   <div class="float-msg" id="floatMsg"></div>
   <div class="corner-deco" id="cornerDeco">🌙</div>
   <script>
-    let currentDate=new Date(),calendarDate=new Date(),entries={},saveTimeout=null,theme='ink';
-    const $=id=>document.getElementById(id),journalArea=$('journalArea'),wordCount=$('wordCount'),currentDateEl=$('currentDate'),modalOverlay=$('modalOverlay'),calendarGrid=$('calendarGrid'),calendarTitle=$('calendarTitle'),entryItems=$('entryItems'),floatMsg=$('floatMsg'),cornerDeco=$('cornerDeco');
-    const seasonDecos={spring:['🌸','🌷','🌱','🦋'],summer:['☀️','🌻','🍉','🌊'],autumn:['🍂','🍁','🌾','🎑'],winter:['❄️','🌙','☕','🕯️']};
-    const getSeason=d=>{const m=d.getMonth();return m>=2&&m<=4?'spring':m>=5&&m<=7?'summer':m>=8&&m<=10?'autumn':'winter'};
-    const getDateKey=d=>d.toISOString().split('T')[0];
-    const formatDate=d=>{const w=['日','一','二','三','四','五','六'];return`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 星期${w[d.getDay()]}`};
-    const showMsg=m=>{floatMsg.textContent=m;floatMsg.classList.add('visible');setTimeout(()=>floatMsg.classList.remove('visible'),2500)};
-    const updateDeco=()=>{const s=seasonDecos[getSeason(currentDate)];cornerDeco.textContent=s[Math.floor(Math.random()*s.length)]};
-    const updateWordCount=()=>{const c=journalArea.value.length;wordCount.textContent=`${c} 字`;if(c===100)showMsg('一百字了，继续写 ✨');else if(c===500)showMsg('五百字！今天话很多呢 📝');else if(c===1000)showMsg('一千字！真是充实的一天 🌟')};
+    // 状态
+    let currentDate = new Date();
+    let calendarDate = new Date();
+    let entries = {};
+    let theme = 'ink';
+    let saveTimeout = null;
 
-```
-async function loadAll(){
-  try{
-    const r=await window.storage.get('journal_data');
-    if(r&&r.value){const d=JSON.parse(r.value);entries=d.entries||{};theme=d.theme||'ink';document.body.dataset.theme=theme}
-  }catch(e){entries={}}
-  updateDateDisplay();loadCurrentEntry();updateDeco();setPlaceholder();
-}
+    // 元素
+    const $ = id => document.getElementById(id);
+    const journalArea = $('journalArea');
+    const wordCount = $('wordCount');
+    const currentDateEl = $('currentDate');
+    const modalOverlay = $('modalOverlay');
+    const calendarGrid = $('calendarGrid');
+    const calendarTitle = $('calendarTitle');
+    const entryItems = $('entryItems');
+    const floatMsg = $('floatMsg');
+    const cornerDeco = $('cornerDeco');
 
-async function saveAll(){
-  try{await window.storage.set('journal_data',JSON.stringify({entries,theme}))}catch(e){console.log('save error',e)}
-}
+    // 季节装饰
+    const seasonDecos = {
+      spring: ['🌸', '🌷', '🌱', '🦋'],
+      summer: ['☀️', '🌻', '🍉', '🌊'],
+      autumn: ['🍂', '🍁', '🌾', '🎑'],
+      winter: ['❄️', '🌙', '☕', '🕯️']
+    };
 
-function updateDateDisplay(){currentDateEl.textContent=formatDate(currentDate)}
-function loadCurrentEntry(){journalArea.value=entries[getDateKey(currentDate)]||'';updateWordCount()}
-function saveCurrentEntry(){const k=getDateKey(currentDate),c=journalArea.value.trim();if(c)entries[k]=c;else delete entries[k]}
-function setPlaceholder(){const h=new Date().getHours();journalArea.placeholder=h>=5&&h<12?'早安。今天想写点什么？':h>=12&&h<18?'下午好。有什么想记下来的吗？':h>=18&&h<22?'晚上好。今天过得怎么样？':'夜深了。睡前想写点什么吗？'}
+    function getSeason(d) {
+      const m = d.getMonth();
+      if (m >= 2 && m <= 4) return 'spring';
+      if (m >= 5 && m <= 7) return 'summer';
+      if (m >= 8 && m <= 10) return 'autumn';
+      return 'winter';
+    }
 
-$('prevDay').onclick=()=>{saveCurrentEntry();saveAll();currentDate.setDate(currentDate.getDate()-1);updateDateDisplay();loadCurrentEntry();updateDeco()};
-$('nextDay').onclick=()=>{saveCurrentEntry();saveAll();currentDate.setDate(currentDate.getDate()+1);updateDateDisplay();loadCurrentEntry();updateDeco()};
-currentDateEl.onclick=()=>{saveCurrentEntry();saveAll();currentDate=new Date();updateDateDisplay();loadCurrentEntry();showMsg('回到今天')};
+    function getDateKey(d) {
+      return d.toISOString().split('T')[0];
+    }
 
-journalArea.oninput=()=>{updateWordCount();if(saveTimeout)clearTimeout(saveTimeout);saveTimeout=setTimeout(()=>{saveCurrentEntry();saveAll()},1000)};
+    function formatDate(d) {
+      const w = ['日', '一', '二', '三', '四', '五', '六'];
+      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${w[d.getDay()]}`;
+    }
 
-document.querySelectorAll('.theme-btn').forEach(b=>b.onclick=()=>{theme=b.dataset.color;document.body.dataset.theme=theme;saveAll();const n={ink:'墨蓝',wine:'酒红',forest:'松绿',violet:'堇紫',night:'夜间'};showMsg(n[theme])});
+    function showMsg(m) {
+      floatMsg.textContent = m;
+      floatMsg.classList.add('visible');
+      setTimeout(() => floatMsg.classList.remove('visible'), 2500);
+    }
 
-$('calendarBtn').onclick=()=>{calendarDate=new Date(currentDate);renderCalendar();renderEntryList();modalOverlay.classList.add('visible')};
-modalOverlay.onclick=e=>{if(e.target===modalOverlay)modalOverlay.classList.remove('visible')};
-$('prevMonth').onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar()};
-$('nextMonth').onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar()};
+    function updateDeco() {
+      const s = seasonDecos[getSeason(currentDate)];
+      cornerDeco.textContent = s[Math.floor(Math.random() * s.length)];
+    }
 
-function renderCalendar(){
-  const y=calendarDate.getFullYear(),m=calendarDate.getMonth();
-  calendarTitle.textContent=`${y}年${m+1}月`;
-  const first=new Date(y,m,1),last=new Date(y,m+1,0),start=first.getDay(),total=last.getDate();
-  const todayK=getDateKey(new Date()),selK=getDateKey(currentDate);
-  let h='';['日','一','二','三','四','五','六'].forEach(d=>h+=`<div class="calendar-weekday">${d}</div>`);
-  const prev=new Date(y,m,0).getDate();
-  for(let i=start-1;i>=0;i--)h+=`<div class="calendar-day other-month">${prev-i}</div>`;
-  for(let d=1;d<=total;d++){const dk=getDateKey(new Date(y,m,d));let c='calendar-day';if(dk===todayK)c+=' today';if(dk===selK)c+=' selected';if(entries[dk])c+=' has-entry';h+=`<div class="${c}" data-date="${dk}">${d}</div>`}
-  const rem=42-(start+total);for(let d=1;d<=rem&&rem<7;d++)h+=`<div class="calendar-day other-month">${d}</div>`;
-  calendarGrid.innerHTML=h;
-  calendarGrid.querySelectorAll('.calendar-day:not(.other-month)').forEach(el=>el.onclick=()=>{const dk=el.dataset.date;if(dk){saveCurrentEntry();saveAll();currentDate=new Date(dk+'T00:00:00');updateDateDisplay();loadCurrentEntry();modalOverlay.classList.remove('visible')}});
-}
+    function updateWordCount() {
+      const c = journalArea.value.length;
+      wordCount.textContent = `${c} 字`;
+      if (c === 100) showMsg('一百字了，继续写 ✨');
+      else if (c === 500) showMsg('五百字！今天话很多呢 📝');
+      else if (c === 1000) showMsg('一千字！真是充实的一天 🌟');
+    }
 
-function renderEntryList(){
-  const keys=Object.keys(entries).sort().reverse().slice(0,10);
-  if(!keys.length){entryItems.innerHTML='<div style="color:var(--ink-light);font-size:12px">还没有日记</div>';return}
-  let h='';keys.forEach(k=>{const d=new Date(k+'T00:00:00'),p=entries[k].slice(0,25)+(entries[k].length>25?'...':'');h+=`<div class="entry-item" data-date="${k}"><div class="entry-item-date">${formatDate(d)}</div><div class="entry-item-preview">${p}</div></div>`});
-  entryItems.innerHTML=h;
-  entryItems.querySelectorAll('.entry-item').forEach(el=>el.onclick=()=>{saveCurrentEntry();saveAll();currentDate=new Date(el.dataset.date+'T00:00:00');updateDateDisplay();loadCurrentEntry();modalOverlay.classList.remove('visible')});
-}
+    // 存储 - 使用 localStorage
+    function loadAll() {
+      try {
+        const saved = localStorage.getItem('journal_data');
+        if (saved) {
+          const d = JSON.parse(saved);
+          entries = d.entries || {};
+          theme = d.theme || 'ink';
+          document.body.dataset.theme = theme;
+        }
+      } catch (e) {
+        console.log('加载失败', e);
+        entries = {};
+      }
+      updateDateDisplay();
+      loadCurrentEntry();
+      updateDeco();
+      setPlaceholder();
+    }
 
-$('exportBtn').onclick=()=>{
-  saveCurrentEntry();const keys=Object.keys(entries).sort();
-  if(!keys.length){showMsg('还没有日记可以导出');return}
-  let c=`# 我的日记\n\n导出时间：${formatDate(new Date())}\n共 ${keys.length} 篇\n\n---\n\n`;
-  keys.forEach(k=>{c+=`## ${formatDate(new Date(k+'T00:00:00'))}\n\n${entries[k]}\n\n---\n\n`});
-  c+='\n\n> 每一个字都是你认真活过的证据。\n> ——你的日记本\n';
-  const blob=new Blob([c],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download=`我的日记_${getDateKey(new Date())}.md`;a.click();URL.revokeObjectURL(url);showMsg('已导出 ✓');
-};
+    function saveAll() {
+      try {
+        localStorage.setItem('journal_data', JSON.stringify({ entries, theme }));
+      } catch (e) {
+        console.log('保存失败', e);
+      }
+    }
 
-let decoClicks=0;cornerDeco.onclick=()=>{decoClicks++;if(decoClicks>=3){decoClicks=0;const m=['你发现了我','今天也辛苦了','记得喝水','困了就睡','球球最好了'];showMsg(m[Math.floor(Math.random()*m.length)])}};
-$('mainTitle').onclick=()=>showMsg('认真写，我在看');
-document.onkeydown=e=>{if(e.key==='Escape'&&modalOverlay.classList.contains('visible'))modalOverlay.classList.remove('visible')};
+    function updateDateDisplay() {
+      currentDateEl.textContent = formatDate(currentDate);
+    }
 
-loadAll();
-```
+    function loadCurrentEntry() {
+      journalArea.value = entries[getDateKey(currentDate)] || '';
+      updateWordCount();
+    }
 
+    function saveCurrentEntry() {
+      const k = getDateKey(currentDate);
+      const c = journalArea.value.trim();
+      if (c) entries[k] = c;
+      else delete entries[k];
+    }
+
+    function setPlaceholder() {
+      const h = new Date().getHours();
+      if (h >= 5 && h < 12) journalArea.placeholder = '早安。今天想写点什么？';
+      else if (h >= 12 && h < 18) journalArea.placeholder = '下午好。有什么想记下来的吗？';
+      else if (h >= 18 && h < 22) journalArea.placeholder = '晚上好。今天过得怎么样？';
+      else journalArea.placeholder = '夜深了。睡前想写点什么吗？';
+    }
+
+    // 日期导航
+    $('prevDay').onclick = () => {
+      saveCurrentEntry();
+      saveAll();
+      currentDate.setDate(currentDate.getDate() - 1);
+      updateDateDisplay();
+      loadCurrentEntry();
+      updateDeco();
+    };
+
+    $('nextDay').onclick = () => {
+      saveCurrentEntry();
+      saveAll();
+      currentDate.setDate(currentDate.getDate() + 1);
+      updateDateDisplay();
+      loadCurrentEntry();
+      updateDeco();
+    };
+
+    currentDateEl.onclick = () => {
+      saveCurrentEntry();
+      saveAll();
+      currentDate = new Date();
+      updateDateDisplay();
+      loadCurrentEntry();
+      showMsg('回到今天');
+    };
+
+    // 输入
+    journalArea.oninput = () => {
+      updateWordCount();
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        saveCurrentEntry();
+        saveAll();
+      }, 1000);
+    };
+
+    // 主题
+    document.querySelectorAll('.theme-btn').forEach(b => {
+      b.onclick = () => {
+        theme = b.dataset.color;
+        document.body.dataset.theme = theme;
+        saveAll();
+        const n = { ink: '墨蓝', wine: '酒红', forest: '松绿', violet: '堇紫', night: '夜间' };
+        showMsg(n[theme]);
+      };
+    });
+
+    // 日历
+    $('calendarBtn').onclick = () => {
+      calendarDate = new Date(currentDate);
+      renderCalendar();
+      renderEntryList();
+      modalOverlay.classList.add('visible');
+    };
+
+    modalOverlay.onclick = e => {
+      if (e.target === modalOverlay) modalOverlay.classList.remove('visible');
+    };
+
+    $('prevMonth').onclick = () => {
+      calendarDate.setMonth(calendarDate.getMonth() - 1);
+      renderCalendar();
+    };
+
+    $('nextMonth').onclick = () => {
+      calendarDate.setMonth(calendarDate.getMonth() + 1);
+      renderCalendar();
+    };
+
+    function renderCalendar() {
+      const y = calendarDate.getFullYear();
+      const m = calendarDate.getMonth();
+      calendarTitle.textContent = `${y}年${m + 1}月`;
+
+      const first = new Date(y, m, 1);
+      const last = new Date(y, m + 1, 0);
+      const start = first.getDay();
+      const total = last.getDate();
+      const todayK = getDateKey(new Date());
+      const selK = getDateKey(currentDate);
+
+      let h = '';
+      ['日', '一', '二', '三', '四', '五', '六'].forEach(d => {
+        h += `<div class="calendar-weekday">${d}</div>`;
+      });
+
+      const prev = new Date(y, m, 0).getDate();
+      for (let i = start - 1; i >= 0; i--) {
+        h += `<div class="calendar-day other-month">${prev - i}</div>`;
+      }
+
+      for (let d = 1; d <= total; d++) {
+        const dk = getDateKey(new Date(y, m, d));
+        let c = 'calendar-day';
+        if (dk === todayK) c += ' today';
+        if (dk === selK) c += ' selected';
+        if (entries[dk]) c += ' has-entry';
+        h += `<div class="${c}" data-date="${dk}">${d}</div>`;
+      }
+
+      const rem = 42 - (start + total);
+      for (let d = 1; d <= rem && rem < 7; d++) {
+        h += `<div class="calendar-day other-month">${d}</div>`;
+      }
+
+      calendarGrid.innerHTML = h;
+
+      calendarGrid.querySelectorAll('.calendar-day:not(.other-month)').forEach(el => {
+        el.onclick = () => {
+          const dk = el.dataset.date;
+          if (dk) {
+            saveCurrentEntry();
+            saveAll();
+            currentDate = new Date(dk + 'T00:00:00');
+            updateDateDisplay();
+            loadCurrentEntry();
+            modalOverlay.classList.remove('visible');
+          }
+        };
+      });
+    }
+
+    function renderEntryList() {
+      const keys = Object.keys(entries).sort().reverse().slice(0, 10);
+      if (!keys.length) {
+        entryItems.innerHTML = '<div style="color:var(--ink-light);font-size:12px">还没有日记</div>';
+        return;
+      }
+
+      let h = '';
+      keys.forEach(k => {
+        const d = new Date(k + 'T00:00:00');
+        const p = entries[k].slice(0, 25) + (entries[k].length > 25 ? '...' : '');
+        h += `<div class="entry-item" data-date="${k}">
+          <div class="entry-item-date">${formatDate(d)}</div>
+          <div class="entry-item-preview">${p}</div>
+        </div>`;
+      });
+
+      entryItems.innerHTML = h;
+
+      entryItems.querySelectorAll('.entry-item').forEach(el => {
+        el.onclick = () => {
+          saveCurrentEntry();
+          saveAll();
+          currentDate = new Date(el.dataset.date + 'T00:00:00');
+          updateDateDisplay();
+          loadCurrentEntry();
+          modalOverlay.classList.remove('visible');
+        };
+      });
+    }
+
+    // 导出
+    $('exportBtn').onclick = () => {
+      saveCurrentEntry();
+      const keys = Object.keys(entries).sort();
+      if (!keys.length) {
+        showMsg('还没有日记可以导出');
+        return;
+      }
+
+      let c = `# 我的日记\n\n导出时间：${formatDate(new Date())}\n共 ${keys.length} 篇\n\n---\n\n`;
+      keys.forEach(k => {
+        c += `## ${formatDate(new Date(k + 'T00:00:00'))}\n\n${entries[k]}\n\n---\n\n`;
+      });
+      c += '\n\n> 每一个字都是你认真活过的证据。\n> ——你的日记本\n';
+
+      const blob = new Blob([c], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `我的日记_${getDateKey(new Date())}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showMsg('已导出 ✓');
+    };
+
+    // 彩蛋
+    let decoClicks = 0;
+    cornerDeco.onclick = () => {
+      decoClicks++;
+      if (decoClicks >= 3) {
+        decoClicks = 0;
+        const m = ['你发现了我', '今天也辛苦了', '记得喝水', '困了就睡', '球球最好了'];
+        showMsg(m[Math.floor(Math.random() * m.length)]);
+      }
+    };
+
+    $('mainTitle').onclick = () => showMsg('认真写，我在看');
+
+    document.onkeydown = e => {
+      if (e.key === 'Escape' && modalOverlay.classList.contains('visible')) {
+        modalOverlay.classList.remove('visible');
+      }
+    };
+
+    // 启动
+    loadAll();
   </script>
 </body>
 </html>
