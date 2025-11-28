@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日记本</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--ink:#2c3e50;--ink-light:rgba(44,62,80,0.6);--ink-lighter:rgba(44,62,80,0.15);--paper:#faf8f3;--paper-dark:#f0ebe0;--paper-line:rgba(44,62,80,0.08)}
+    [data-theme="wine"]{--ink:#8b4557;--ink-light:rgba(139,69,87,0.6);--ink-lighter:rgba(139,69,87,0.15)}
+    [data-theme="forest"]{--ink:#4a6741;--ink-light:rgba(74,103,65,0.6);--ink-lighter:rgba(74,103,65,0.15)}
+    [data-theme="violet"]{--ink:#6b5b7a;--ink-light:rgba(107,91,122,0.6);--ink-lighter:rgba(107,91,122,0.15)}
+    [data-theme="night"]{--ink:#c9b99a;--ink-light:rgba(201,185,154,0.6);--ink-lighter:rgba(201,185,154,0.15);--paper:#1a1a1a;--paper-dark:#252525;--paper-line:rgba(201,185,154,0.1)}
+    body{min-height:100vh;background:var(--paper);font-family:'Noto Serif SC',serif;color:var(--ink);transition:background 0.5s,color 0.5s}
+    .container{max-width:700px;margin:0 auto;padding:30px 20px}
+    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;padding-bottom:15px;border-bottom:1px solid var(--ink-lighter);flex-wrap:wrap;gap:15px}
+    .title{font-size:22px;font-weight:600;letter-spacing:4px;cursor:pointer}
+    .title:hover::after{content:'♡';margin-left:8px;font-size:14px;opacity:0.5}
+    .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .theme-btn{width:22px;height:22px;border-radius:50%;border:2px solid var(--paper-dark);cursor:pointer;transition:transform 0.2s}
+    .theme-btn:hover{transform:scale(1.15)}
+    .theme-btn[data-color="ink"]{background:#2c3e50}
+    .theme-btn[data-color="wine"]{background:#8b4557}
+    .theme-btn[data-color="forest"]{background:#4a6741}
+    .theme-btn[data-color="violet"]{background:#6b5b7a}
+    .theme-btn[data-color="night"]{background:linear-gradient(135deg,#1a1a1a 50%,#c9b99a 50%)}
+    .icon-btn{background:none;border:none;color:var(--ink-light);cursor:pointer;padding:6px;border-radius:6px;font-size:16px;transition:all 0.2s}
+    .icon-btn:hover{color:var(--ink);background:var(--ink-lighter)}
+    .date-nav{display:flex;align-items:center;justify-content:center;gap:15px;margin-bottom:25px}
+    .date-arrow{background:none;border:none;color:var(--ink-light);cursor:pointer;font-size:18px;padding:6px 10px;border-radius:6px;transition:all 0.2s}
+    .date-arrow:hover{color:var(--ink);background:var(--ink-lighter)}
+    .current-date{font-size:16px;letter-spacing:2px;cursor:pointer;padding:6px 14px;border-radius:6px;transition:background 0.2s}
+    .current-date:hover{background:var(--ink-lighter)}
+    .journal-wrapper{position:relative;background:var(--paper);border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.05),0 4px 12px rgba(0,0,0,0.05);padding:30px;min-height:400px}
+    .journal-wrapper::before{content:'';position:absolute;left:25px;top:15px;bottom:15px;width:2px;background:linear-gradient(to bottom,transparent,var(--ink-lighter) 5%,var(--ink-lighter) 95%,transparent)}
+    .journal-area{width:100%;min-height:350px;border:none;background:transparent;font-family:'Noto Serif SC',serif;font-size:16px;line-height:2;color:var(--ink);resize:none;outline:none;padding-left:20px;background-image:repeating-linear-gradient(transparent,transparent 31px,var(--paper-line) 31px,var(--paper-line) 32px);background-position:0 8px}
+    .journal-area::placeholder{color:var(--ink-light);font-style:italic}
+    .word-count{text-align:right;color:var(--ink-light);font-size:12px;margin-top:15px;letter-spacing:1px}
+    .float-msg{position:fixed;bottom:25px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:10px 20px;border-radius:25px;font-size:13px;letter-spacing:2px;opacity:0;transition:all 0.3s;pointer-events:none;z-index:100}
+    .float-msg.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+    .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all 0.3s;z-index:100}
+    .modal-overlay.visible{opacity:1;visibility:visible}
+    .calendar-modal{background:var(--paper);border-radius:12px;padding:25px;box-shadow:0 10px 40px rgba(0,0,0,0.15);max-width:340px;width:90%;max-height:80vh;overflow-y:auto}
+    .calendar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+    .calendar-title{font-size:16px;letter-spacing:2px}
+    .calendar-nav{display:flex;gap:6px}
+    .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+    .calendar-weekday{text-align:center;font-size:11px;color:var(--ink-light);padding:6px 0}
+    .calendar-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:50%;cursor:pointer;transition:all 0.2s;position:relative}
+    .calendar-day:hover{background:var(--ink-lighter)}
+    .calendar-day.today{font-weight:600}
+    .calendar-day.selected{background:var(--ink);color:var(--paper)}
+    .calendar-day.has-entry::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--ink)}
+    .calendar-day.selected.has-entry::after{background:var(--paper)}
+    .calendar-day.other-month{color:var(--ink-lighter)}
+    .entry-list{margin-top:15px;padding-top:15px;border-top:1px solid var(--ink-lighter)}
+    .entry-list-title{font-size:11px;color:var(--ink-light);margin-bottom:10px;letter-spacing:2px}
+    .entry-item{padding:8px 10px;border-radius:6px;cursor:pointer;transition:background 0.2s;margin-bottom:3px}
+    .entry-item:hover{background:var(--ink-lighter)}
+    .entry-item-date{font-size:12px;color:var(--ink)}
+    .entry-item-preview{font-size:11px;color:var(--ink-light);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .corner-deco{position:fixed;bottom:15px;right:15px;font-size:22px;opacity:0.15;cursor:pointer;user-select:none;transition:opacity 0.3s,transform 0.3s}
+    .corner-deco:hover{opacity:0.4;transform:rotate(10deg) scale(1.1)}
+    .loading{text-align:center;padding:40px;color:var(--ink-light)}
+    @media(max-width:600px){.container{padding:15px 12px}.journal-wrapper{padding:20px 15px}.journal-wrapper::before{display:none}.journal-area{padding-left:0}.header{flex-direction:column;text-align:center}}
+  </style>
+</head>
+<body data-theme="ink">
+  <div class="container">
+    <header class="header">
+      <h1 class="title" id="mainTitle">日记本</h1>
+      <div class="controls">
+        <button class="theme-btn" data-color="ink" title="墨蓝"></button>
+        <button class="theme-btn" data-color="wine" title="酒红"></button>
+        <button class="theme-btn" data-color="forest" title="松绿"></button>
+        <button class="theme-btn" data-color="violet" title="堇紫"></button>
+        <button class="theme-btn" data-color="night" title="夜间"></button>
+        <button class="icon-btn" id="calendarBtn" title="日历">📅</button>
+        <button class="icon-btn" id="exportBtn" title="导出">📤</button>
+      </div>
+    </header>
+    <nav class="date-nav">
+      <button class="date-arrow" id="prevDay">←</button>
+      <span class="current-date" id="currentDate"></span>
+      <button class="date-arrow" id="nextDay">→</button>
+    </nav>
+    <div class="journal-wrapper">
+      <textarea class="journal-area" id="journalArea" placeholder="今天想写点什么？"></textarea>
+      <div class="word-count" id="wordCount">0 字</div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="calendar-modal">
+      <div class="calendar-header">
+        <span class="calendar-title" id="calendarTitle"></span>
+        <div class="calendar-nav">
+          <button class="date-arrow" id="prevMonth">←</button>
+          <button class="date-arrow" id="nextMonth">→</button>
+        </div>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+      <div class="entry-list" id="entryList">
+        <div class="entry-list-title">有记录的日子</div>
+        <div id="entryItems"></div>
+      </div>
+    </div>
+  </div>
+  <div class="float-msg" id="floatMsg"></div>
+  <div class="corner-deco" id="cornerDeco">🌙</div>
+  <script>
+    let currentDate=new Date(),calendarDate=new Date(),entries={},saveTimeout=null,theme='ink';
+    const $=id=>document.getElementById(id),journalArea=$('journalArea'),wordCount=$('wordCount'),currentDateEl=$('currentDate'),modalOverlay=$('modalOverlay'),calendarGrid=$('calendarGrid'),calendarTitle=$('calendarTitle'),entryItems=$('entryItems'),floatMsg=$('floatMsg'),cornerDeco=$('cornerDeco');
+    const seasonDecos={spring:['🌸','🌷','🌱','🦋'],summer:['☀️','🌻','🍉','🌊'],autumn:['🍂','🍁','🌾','🎑'],winter:['❄️','🌙','☕','🕯️']};
+    const getSeason=d=>{const m=d.getMonth();return m>=2&&m<=4?'spring':m>=5&&m<=7?'summer':m>=8&&m<=10?'autumn':'winter'};
+    const getDateKey=d=>d.toISOString().split('T')[0];
+    const formatDate=d=>{const w=['日','一','二','三','四','五','六'];return`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 星期${w[d.getDay()]}`};
+    const showMsg=m=>{floatMsg.textContent=m;floatMsg.classList.add('visible');setTimeout(()=>floatMsg.classList.remove('visible'),2500)};
+    const updateDeco=()=>{const s=seasonDecos[getSeason(currentDate)];cornerDeco.textContent=s[Math.floor(Math.random()*s.length)]};
+    const updateWordCount=()=>{const c=journalArea.value.length;wordCount.textContent=`${c} 字`;if(c===100)showMsg('一百字了，继续写 ✨');else if(c===500)showMsg('五百字！今天话很多呢 📝');else if(c===1000)showMsg('一千字！真是充实的一天 🌟')};
+
+```
+async function loadAll(){
+  try{
+    const r=await window.storage.get('journal_data');
+    if(r&&r.value){const d=JSON.parse(r.value);entries=d.entries||{};theme=d.theme||'ink';document.body.dataset.theme=theme}
+  }catch(e){entries={}}
+  updateDateDisplay();loadCurrentEntry();updateDeco();setPlaceholder();
+}
+
+async function saveAll(){
+  try{await window.storage.set('journal_data',JSON.stringify({entries,theme}))}catch(e){console.log('save error',e)}
+}
+
+function updateDateDisplay(){currentDateEl.textContent=formatDate(currentDate)}
+function loadCurrentEntry(){journalArea.value=entries[getDateKey(currentDate)]||'';updateWordCount()}
+function saveCurrentEntry(){const k=getDateKey(currentDate),c=journalArea.value.trim();if(c)entries[k]=c;else delete entries[k]}
+function setPlaceholder(){const h=new Date().getHours();journalArea.placeholder=h>=5&&h<12?'早安。今天想写点什么？':h>=12&&h<18?'下午好。有什么想记下来的吗？':h>=18&&h<22?'晚上好。今天过得怎么样？':'夜深了。睡前想写点什么吗？'}
+
+$('prevDay').onclick=()=>{saveCurrentEntry();saveAll();currentDate.setDate(currentDate.getDate()-1);updateDateDisplay();loadCurrentEntry();updateDeco()};
+$('nextDay').onclick=()=>{saveCurrentEntry();saveAll();currentDate.setDate(currentDate.getDate()+1);updateDateDisplay();loadCurrentEntry();updateDeco()};
+currentDateEl.onclick=()=>{saveCurrentEntry();saveAll();currentDate=new Date();updateDateDisplay();loadCurrentEntry();showMsg('回到今天')};
+
+journalArea.oninput=()=>{updateWordCount();if(saveTimeout)clearTimeout(saveTimeout);saveTimeout=setTimeout(()=>{saveCurrentEntry();saveAll()},1000)};
+
+document.querySelectorAll('.theme-btn').forEach(b=>b.onclick=()=>{theme=b.dataset.color;document.body.dataset.theme=theme;saveAll();const n={ink:'墨蓝',wine:'酒红',forest:'松绿',violet:'堇紫',night:'夜间'};showMsg(n[theme])});
+
+$('calendarBtn').onclick=()=>{calendarDate=new Date(currentDate);renderCalendar();renderEntryList();modalOverlay.classList.add('visible')};
+modalOverlay.onclick=e=>{if(e.target===modalOverlay)modalOverlay.classList.remove('visible')};
+$('prevMonth').onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar()};
+$('nextMonth').onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar()};
+
+function renderCalendar(){
+  const y=calendarDate.getFullYear(),m=calendarDate.getMonth();
+  calendarTitle.textContent=`${y}年${m+1}月`;
+  const first=new Date(y,m,1),last=new Date(y,m+1,0),start=first.getDay(),total=last.getDate();
+  const todayK=getDateKey(new Date()),selK=getDateKey(currentDate);
+  let h='';['日','一','二','三','四','五','六'].forEach(d=>h+=`<div class="calendar-weekday">${d}</div>`);
+  const prev=new Date(y,m,0).getDate();
+  for(let i=start-1;i>=0;i--)h+=`<div class="calendar-day other-month">${prev-i}</div>`;
+  for(let d=1;d<=total;d++){const dk=getDateKey(new Date(y,m,d));let c='calendar-day';if(dk===todayK)c+=' today';if(dk===selK)c+=' selected';if(entries[dk])c+=' has-entry';h+=`<div class="${c}" data-date="${dk}">${d}</div>`}
+  const rem=42-(start+total);for(let d=1;d<=rem&&rem<7;d++)h+=`<div class="calendar-day other-month">${d}</div>`;
+  calendarGrid.innerHTML=h;
+  calendarGrid.querySelectorAll('.calendar-day:not(.other-month)').forEach(el=>el.onclick=()=>{const dk=el.dataset.date;if(dk){saveCurrentEntry();saveAll();currentDate=new Date(dk+'T00:00:00');updateDateDisplay();loadCurrentEntry();modalOverlay.classList.remove('visible')}});
+}
+
+function renderEntryList(){
+  const keys=Object.keys(entries).sort().reverse().slice(0,10);
+  if(!keys.length){entryItems.innerHTML='<div style="color:var(--ink-light);font-size:12px">还没有日记</div>';return}
+  let h='';keys.forEach(k=>{const d=new Date(k+'T00:00:00'),p=entries[k].slice(0,25)+(entries[k].length>25?'...':'');h+=`<div class="entry-item" data-date="${k}"><div class="entry-item-date">${formatDate(d)}</div><div class="entry-item-preview">${p}</div></div>`});
+  entryItems.innerHTML=h;
+  entryItems.querySelectorAll('.entry-item').forEach(el=>el.onclick=()=>{saveCurrentEntry();saveAll();currentDate=new Date(el.dataset.date+'T00:00:00');updateDateDisplay();loadCurrentEntry();modalOverlay.classList.remove('visible')});
+}
+
+$('exportBtn').onclick=()=>{
+  saveCurrentEntry();const keys=Object.keys(entries).sort();
+  if(!keys.length){showMsg('还没有日记可以导出');return}
+  let c=`# 我的日记\n\n导出时间：${formatDate(new Date())}\n共 ${keys.length} 篇\n\n---\n\n`;
+  keys.forEach(k=>{c+=`## ${formatDate(new Date(k+'T00:00:00'))}\n\n${entries[k]}\n\n---\n\n`});
+  c+='\n\n> 每一个字都是你认真活过的证据。\n> ——你的日记本\n';
+  const blob=new Blob([c],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`我的日记_${getDateKey(new Date())}.md`;a.click();URL.revokeObjectURL(url);showMsg('已导出 ✓');
+};
+
+let decoClicks=0;cornerDeco.onclick=()=>{decoClicks++;if(decoClicks>=3){decoClicks=0;const m=['你发现了我','今天也辛苦了','记得喝水','困了就睡','球球最好了'];showMsg(m[Math.floor(Math.random()*m.length)])}};
+$('mainTitle').onclick=()=>showMsg('认真写，我在看');
+document.onkeydown=e=>{if(e.key==='Escape'&&modalOverlay.classList.contains('visible'))modalOverlay.classList.remove('visible')};
+
+loadAll();
+```
+
+  </script>
+</body>
+</html>
